@@ -46,6 +46,9 @@ const HALLUCINATED_APIS = [
   }
 ];
 
+const SECURITY_SENSITIVE_RANDOM_ASSIGNMENT =
+  /(?:^|[;{]\s*)(?:(?:const|let|var)\s+)?(?:token|secret|password|apiKey|apikey|key)\b\s*=\s*[^;\n]*\bMath\.random\s*\(/i;
+
 const SECURITY_THEATER = [
   {
     pattern: /\bbtoa\s*\(\s*(password|secret|token|apiKey|apikey|key)\b/i,
@@ -53,11 +56,15 @@ const SECURITY_THEATER = [
     suggestion: 'Use a vetted password hashing or encryption primitive for the threat model.'
   },
   {
-    pattern: /(?:^|[;{]\s*)(?:(?:const|let|var)\s+)?(?:token|secret|password|apiKey|apikey|key)\b\s*=\s*[^;\n]*\bMath\.random\s*\(/i,
+    pattern: SECURITY_SENSITIVE_RANDOM_ASSIGNMENT,
     message: 'Math.random is not suitable for security-sensitive values.',
     suggestion: 'Use crypto.randomBytes or crypto.getRandomValues.'
   }
 ];
+
+const EMPTY_CATCH_BODY_PATTERN = /^\s*(?:\/\/.*)?\s*$/;
+const ERROR_SWALLOW_PATTERN = /\b(return\s+(?:null|undefined|false|\[\]|\{\})|console\.(?:log|warn|error))\b/;
+const IMPLEMENTATION_DETAIL_ASSERTION_PATTERN = /\b(?:expect|assert)\b[^\n]*(?:mock\.calls|\._private\b|\.internal\b)/g;
 
 export async function scanPath(targetPath) {
   const absoluteTarget = path.resolve(targetPath);
@@ -145,8 +152,8 @@ function detectOverBroadTryCatch(source, file) {
     const catchBody = match[2];
     const line = lineNumberForIndex(source, match.index);
     const catchUsesError = catchName && new RegExp(`\\b${escapeRegExp(catchName)}\\b`).test(catchBody);
-    const swallowsError = /^\s*(?:\/\/.*)?\s*$/.test(catchBody)
-      || /\b(return\s+(?:null|undefined|false|\[\]|\{\})|console\.(?:log|warn|error))\b/.test(catchBody);
+    const swallowsError = EMPTY_CATCH_BODY_PATTERN.test(catchBody)
+      || ERROR_SWALLOW_PATTERN.test(catchBody);
 
     if (!catchUsesError || swallowsError) {
       findings.push({
@@ -271,7 +278,7 @@ function detectImplementationDetailTests(source, file) {
     return [];
   }
 
-  const detailAssertions = source.match(/\b(?:expect|assert)\b[^\n]*(?:mock\.calls|\._private\b|\.internal\b)/g) ?? [];
+  const detailAssertions = source.match(IMPLEMENTATION_DETAIL_ASSERTION_PATTERN) ?? [];
 
   if (detailAssertions.length < 2) {
     return [];
