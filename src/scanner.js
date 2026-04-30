@@ -53,7 +53,7 @@ const SECURITY_THEATER = [
     suggestion: 'Use a vetted password hashing or encryption primitive for the threat model.'
   },
   {
-    pattern: /\bMath\.random\s*\(\s*\).*?(token|secret|password|apiKey|apikey|key)/i,
+    pattern: /(?=.*\bMath\.random\s*\(\s*\))(?=.*\b(token|secret|password|apiKey|apikey|key)\b)/i,
     message: 'Math.random is not suitable for security-sensitive values.',
     suggestion: 'Use crypto.randomBytes or crypto.getRandomValues.'
   }
