@@ -151,7 +151,7 @@ function detectOverBroadTryCatch(source, file) {
     const catchName = match[1].trim();
     const catchBody = match[2];
     const line = lineNumberForIndex(source, match.index);
-    const catchUsesError = catchName && new RegExp(`\\b${escapeRegExp(catchName)}\\b`).test(catchBody);
+    const catchUsesError = catchName && includesIdentifier(catchBody, catchName);
     const swallowsError = EMPTY_CATCH_BODY_PATTERN.test(catchBody)
       || ERROR_SWALLOW_PATTERN.test(catchBody);
 
@@ -195,12 +195,12 @@ function detectFakeValidation(lines, file) {
 function detectUnusedAbstractions(source, file) {
   const findings = [];
   const abstractionPattern = /\b(?:class|interface|abstract\s+class)\s+([A-Z][A-Za-z0-9_]*)/g;
+  const identifierCounts = countIdentifiers(source);
 
   for (const match of source.matchAll(abstractionPattern)) {
     const name = match[1];
-    const uses = source.match(new RegExp(`\\b${escapeRegExp(name)}\\b`, 'g')) ?? [];
 
-    if (uses.length === 1 && /(?:Base|Manager|Service|Factory|Provider|Wrapper)$/.test(name)) {
+    if (identifierCounts.get(name) === 1 && /(?:Base|Manager|Service|Factory|Provider|Wrapper)$/.test(name)) {
       findings.push({
         title: 'Unused abstraction',
         message: `${name} is declared but not referenced elsewhere`,
@@ -235,7 +235,7 @@ function detectRegexMonstrosities(lines, file) {
   const findings = [];
 
   lines.forEach((line, index) => {
-    const regexLiteral = line.match(/\/(?:\\.|[^/\\\n]){80,}\/[gimsuyd]*/);
+    const regexLiteral = line.match(/\/(?:\\.|[^/\\\n]){80,}\/[gimsuy]*/);
     const nestedGroups = (line.match(/\([^)]*[+*][^)]*\)[+*{]/g) ?? []).length;
 
     if (regexLiteral || nestedGroups >= 2) {
@@ -297,8 +297,19 @@ function lineNumberForIndex(source, index) {
   return source.slice(0, index).split(/\r?\n/).length;
 }
 
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function includesIdentifier(source, identifier) {
+  return source.match(/[A-Za-z_$][\w$]*/g)?.includes(identifier) ?? false;
+}
+
+function countIdentifiers(source) {
+  const counts = new Map();
+  const identifiers = source.match(/[A-Za-z_$][\w$]*/g) ?? [];
+
+  for (const identifier of identifiers) {
+    counts.set(identifier, (counts.get(identifier) ?? 0) + 1);
+  }
+
+  return counts;
 }
 
 function stripLineComment(line) {
