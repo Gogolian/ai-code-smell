@@ -53,7 +53,7 @@ const SECURITY_THEATER = [
     suggestion: 'Use a vetted password hashing or encryption primitive for the threat model.'
   },
   {
-    pattern: /(?=.*\bMath\.random\s*\(\s*\))(?=.*\b(token|secret|password|apiKey|apikey|key)\b)/i,
+    pattern: /\b(?:const|let|var)?\s*(token|secret|password|apiKey|apikey|key)\b[^=\n]*=\s*[^;\n]*\bMath\.random\s*\(/i,
     message: 'Math.random is not suitable for security-sensitive values.',
     suggestion: 'Use crypto.randomBytes or crypto.getRandomValues.'
   }
@@ -249,8 +249,9 @@ function detectSecurityTheater(lines, file) {
   const findings = [];
 
   lines.forEach((line, index) => {
+    const code = stripLineComment(line);
     for (const smell of SECURITY_THEATER) {
-      if (smell.pattern.test(line)) {
+      if (smell.pattern.test(code)) {
         findings.push({
           title: 'Security theater',
           message: smell.message,
@@ -291,4 +292,8 @@ function lineNumberForIndex(source, index) {
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function stripLineComment(line) {
+  return line.replace(/\s*\/\/.*$/, '');
 }

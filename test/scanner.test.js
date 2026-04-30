@@ -52,7 +52,7 @@ test('calls helpers', () => {
 test('scanPath recursively scans source files and ignores non-source files', async () => {
   const root = await mkdtemp(join(tmpdir(), 'ai-code-smell-'));
   await mkdir(join(root, 'src'));
-  await writeFile(join(root, 'src', 'config.ts'), "const config = fs.readJson('config.json');");
+  await writeFile(join(root, 'src', 'config.ts'), "const config = fs.readJsonSync('config.json');");
   await writeFile(join(root, 'README.md'), 'fs.readJsonSync should not be scanned here');
 
   const findings = await scanPath(root);
