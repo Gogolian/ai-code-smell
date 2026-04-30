@@ -53,7 +53,7 @@ const SECURITY_THEATER = [
     suggestion: 'Use a vetted password hashing or encryption primitive for the threat model.'
   },
   {
-    pattern: /\b(?:const|let|var)?\s*(token|secret|password|apiKey|apikey|key)\b[^=\n]*=\s*[^;\n]*\bMath\.random\s*\(/i,
+    pattern: /(?:^|[;{]\s*)(?:(?:const|let|var)\s+)?(?:token|secret|password|apiKey|apikey|key)\b\s*=\s*[^;\n]*\bMath\.random\s*\(/i,
     message: 'Math.random is not suitable for security-sensitive values.',
     suggestion: 'Use crypto.randomBytes or crypto.getRandomValues.'
   }
@@ -271,7 +271,7 @@ function detectImplementationDetailTests(source, file) {
     return [];
   }
 
-  const detailAssertions = source.match(/\b(?:expect|assert)\b[^\n]*(?:mock\.calls|toHaveBeenCalledWith|_private|private|internal)/g) ?? [];
+  const detailAssertions = source.match(/\b(?:expect|assert)\b[^\n]*(?:mock\.calls|\._private\b|\.internal\b)/g) ?? [];
 
   if (detailAssertions.length < 2) {
     return [];

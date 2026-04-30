@@ -49,6 +49,16 @@ test('calls helpers', () => {
   assert.equal(findings[0].title, 'Implementation-detail test');
 });
 
+test('avoids common false positives in security and test heuristics', () => {
+  const source = `
+const randomValue = Math.random(); // unrelated API key mention
+expect(user.privateProfile).toEqual('hidden');
+expect(api.internalEndpoint).toEqual('/health');
+`;
+
+  assert.deepEqual(scanSource(source, 'src/example.test.ts'), []);
+});
+
 test('scanPath recursively scans source files and ignores non-source files', async () => {
   const root = await mkdtemp(join(tmpdir(), 'ai-code-smell-'));
   await mkdir(join(root, 'src'));
